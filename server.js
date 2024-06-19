@@ -1,19 +1,78 @@
+import { config } from 'dotenv';
+config();
 import express from 'express';
 import axios from 'axios';
+import cors from 'cors';
 
-const PORT = 7000;
+const PORT = process.env.PORT_NO;
 const app = express();
 
+app.use(cors({
+    origin: 'http://localhost:3000',
+    credentials: true
+}));
 app.use(express.json());
 
-app.get('/', (req, res) => {
-    res.send("<h1>Hello world</h1>");
-});
+
+
+const getOrder = async (req, res, token, outletRef, orderRef) => {
+    const {data} = await axios.get(` https://api-gateway.sandbox.ngenius-payments.com/transactions/outlets/${outletRef}/orders/${orderRef}`,{
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+    console.log(data)
+}
+
+const createOrder = async (req, res, token) => {
+    const { currencyCode, value } = req.body;
+
+    if (!currencyCode || !value) {
+        return res.status(400).json({ error: 'Invalid request: currencyCode and value are required' });
+    }
+
+    const postData = {
+        action: "PURCHASE",
+        amount: {
+            currencyCode: currencyCode,
+            value: value
+        }
+    };
+
+    
+    try {
+        const outlet = process.env.OUTLET_REF;
+        // console.log("Following token: " + token)
+        const response = await axios.post(
+            `https://api-gateway.sandbox.ngenius-payments.com/transactions/outlets/${outlet}/orders`,
+            postData,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/vnd.ni-payment.v2+json',
+                    Accept: 'application/vnd.ni-payment.v2+json'
+                }
+            }
+        );
+
+        const orderReference = response.data;
+        const orderPaypageUrl = response.data;
+
+        console.log('Order Reference:', orderReference);
+        console.log('Order Pay Page URL:', orderPaypageUrl);
+
+        res.json({ orderReference, orderPaypageUrl });
+
+    } catch (error) {
+        console.error('Error creating order:', error.response ? error.response.data : error.message);
+        res.status(500).json({ error: 'Failed to create order' });
+        console.log(postData);
+    }
+};
 
 app.post('/api/access-token', async (req, res) => {
     try {
-        const reference = 'ae2059b8-8054-44e3-9a6a-0f5356c9f408';
-        const apiKey = 'ZTg4ODU0ZjQtNTgxNi00NDMzLTkxMzQtMTY5NzFhZGZhZjRkOjg5ZjgyMThlLTM1NjItNDM2NS1hODllLTNkNWI1MWVmMWEyNw==';
+        const apiKey = process.env.API_KEY;
 
         const response = await axios.post(
             'https://api-gateway.sandbox.ngenius-payments.com/identity/auth/access-token',
@@ -26,33 +85,19 @@ app.post('/api/access-token', async (req, res) => {
             }
         );
 
-        res.json(response.data);
-        console.log(response.data);
+        if (response.status === 200) {
+            const token = response.data.access_token;
+            console.log(response.data);
+
+            await createOrder(req, res, token);
+            // await getOrder(req, res, token, process.env.OUTLET_REF)
+        } else {
+            res.status(response.status).json({ error: 'Failed to fetch access token' });
+        }
+
     } catch (error) {
         console.error('Error fetching access token:', error.response ? error.response.data : error.message);
         res.status(500).json({ error: 'Failed to fetch access token' });
-    }
-});
-
-app.get('/api/order-status/:orderReference', async (req, res) => {
-    try {
-        const accessToken = req.query.accessToken; // Access token obtained from frontend
-        const outletReference = 'MY_OUTLET_REFERENCE';
-        const orderReference = req.params.orderReference;
-
-        const response = await axios.get(
-            `https://api-gateway.sandbox.ngenius-payments.com/transactions/outlets/${outletReference}/orders/${orderReference}`,
-            {
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            }
-        );
-
-        res.json(response.data);
-    } catch (error) {
-        console.error('Error fetching order status:', error.response ? error.response.data : error.message);
-        res.status(500).json({ error: 'Failed to fetch order status' });
     }
 });
 
