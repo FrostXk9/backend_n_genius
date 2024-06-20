@@ -32,7 +32,7 @@ const createOrder = async (access_token) => {
         // if (access_token) {
             const response = await axios.post(
                 `https://api-gateway.sandbox.ngenius-payments.com/transactions/outlets/${outlet}/orders`,
-                {action: "PURCHASE", amount:{ currencyCode: "AED", value: 1000 }, emailAddress: "customer@test.com"},
+                {action: "PURCHASE", amount:{ currencyCode: "AED", value: 1000 }},
                 {
                     headers: {
                         "Authorization": `Bearer ${access_token}`,
@@ -50,6 +50,9 @@ const createOrder = async (access_token) => {
     } catch (error) {
         // Log any errors encountered during the request
         if (error.response) {
+            console.log('Date of init:', error.response.headers.date);
+            // Why does the token expire as soon as it initializes
+            console.log('Date of expiration:', error.response.headers.expires);
             console.log('Error creating order:', error.response.data);
         } else {
             console.log('Error creating order:', error.message);
