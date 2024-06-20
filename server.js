@@ -15,7 +15,7 @@ app.use(express.json());
 
 
 
-const getOrder = async (req, res, token, outletRef, orderRef) => {
+const getOrder = async (token, outletRef, orderRef) => {
     const {data} = await axios.get(` https://api-gateway.sandbox.ngenius-payments.com/transactions/outlets/${outletRef}/orders/${orderRef}`,{
         headers: {
             Authorization: `Bearer ${token}`
@@ -24,102 +24,36 @@ const getOrder = async (req, res, token, outletRef, orderRef) => {
     console.log(data)
 }
 
-// const createOrder = async (req, res, token) => {
-//     const { currencyCode, value } = req.body;
-
-//     if (!currencyCode || !value) {
-//         return res.status(400).json({ error: 'Invalid request: currencyCode and value are required' });
-//     }
-
-//     const postData = {
-//         action: "PURCHASE",
-//         amount: {
-//             currencyCode: currencyCode,
-//             value: value
-//         }
-//     };
-
-    
-//     try {
-//         const outlet = process.env.OUTLET_REF;
-//         // console.log("Following token: " + token)
-//         const response = await axios.post(
-//             `https://api-gateway.sandbox.ngenius-payments.com/transactions/outlets/${outlet}/orders`,
-//             postData,
-//             {
-//                 headers: {
-//                     'Authorization': `Bearer ${token}`,
-//                     'Content-Type': 'application/vnd.ni-payment.v2+json',
-//                     'Accept': 'application/vnd.ni-payment.v2+json'
-//                 }
-//             }
-//         );
-
-//         const orderReference = response.data;
-//         const orderPaypageUrl = response.data;
-
-//         console.log('Order Reference:', orderReference);
-//         console.log('Order Pay Page URL:', orderPaypageUrl);
-
-//         res.json({ orderReference, orderPaypageUrl });
-
-//     } catch (error) {
-//         console.error('Error creating order:', error.response ? error.response.data : error.message);
-//         res.status(500).json({ error: 'Failed to create order' });
-//         console.log(postData);
-//     }
-// };
-const createOrder = async (req, res, access_token) => {
+const createOrder = async (access_token) => {
     const outlet = process.env.OUTLET_REF;
-    const token = access_token; 
-    const { action, currencyCode, value, emailAddress, firstName, lastName, address1, city, countryCode } = req.body;
-  
-    // Define the order data
-    const orderData = {
-      action: action,
-      amount: {
-        currencyCode: currencyCode,
-        value:  value
-      },
-      emailAddress: emailAddress,
-      billingAddress: {
-        firstName:firstName,
-        lastName: lastName,
-        address1: address1,
-        city: city,
-        countryCode: countryCode,
-      }
-    };
-  
-    console.log((orderData))
+    
     try {
-      // Send the POST request to create an order
-      if(token.length > 0){
-        const response = await fetch(`https://api-gateway.sandbox.ngenius-payments.com/transactions/outlets/${outlet}/orders`,
-            { 
-                method: "POST",
-                headers: {
-                    "Authorization":`Bearer ${token}`,
-                    "Content-Type":"application/vnd.ni-payment.v2+json",
-                    "Accept":"application/vnd.ni-payment.v2+json"
-                },
-                body: JSON.stringify(orderData),
-            }
-        );
 
-        if (!response.ok) {
-          console.log(`HTTP error! status: ${response.status}`);
-        }
-        
-        // Extract and log useful information from the response
-        // Parse the JSON response
-         const data = await response.json();
-      }
-  
+        // if (access_token) {
+            const response = await axios.post(
+                `https://api-gateway.sandbox.ngenius-payments.com/transactions/outlets/${outlet}/orders`,
+                {action: "PURCHASE", amount:{ currencyCode: "AED", value: 1000 }, emailAddress: "customer@test.com"},
+                {
+                    headers: {
+                        "Authorization": `Bearer ${access_token}`,
+                        "Content-Type": "application/vnd.ni-payment.v2+json",
+                        "Accept": "application/vnd.ni-payment.v2+json"
+                    }
+                }
+            );
+
+            // Extract and log useful information from the response
+            console.log('Response Data:', response.data);
+            console.log(response.headers)
+        // }
 
     } catch (error) {
-      // Log any errors encountered during the request
-      console.log('Error creating order:', error.response ? error.response.data : error.message);
+        // Log any errors encountered during the request
+        if (error.response) {
+            console.log('Error creating order:', error.response.data);
+        } else {
+            console.log('Error creating order:', error.message);
+        }
     }
 };
   
@@ -140,13 +74,10 @@ app.post('/api/access-token', async (req, res) => {
         );
 
         if (response.status === 200) {
-            const token = response.data.access_token;
-            console.log(response.data);
-            res.send(response.data)
-            await createOrder(req, res, token)
+            const {access_token} = response.data;
+            res.send(response.data);
+            await createOrder(access_token);
 
-            // await createOrder(req, res, token);
-            // await getOrder(req, res, token, process.env.OUTLET_REF)
         } else {
             res.status(response.status).json({ error: 'Failed to fetch access token' });
         }

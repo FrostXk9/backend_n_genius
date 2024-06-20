@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "apis": [
+    {
+      "identifier": "ngenius",
+      "source": "@ngenius/v3.0#1mld74kq6wekpz",
+      "integrity": "sha512-q12KaonQEukW/o8giwPszc3A0e5UUmA/WhezW1pF4izzgrWSkCuSRRFtO6fpJOLt+2x0NhIE0b7Gt6kmQ4McDg==",
+      "installerVersion": "6.1.1"
+    }
+  ]
+}
