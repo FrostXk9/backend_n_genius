@@ -29,12 +29,6 @@ const createOrder = async (access_token) => {
         action: "PURCHASE",                             // AUTH && PURCHASE
         amount:{ currencyCode: "AED", value: 1000 },    // AED & 1000
         emailAddress: "customer@test.com"               // customer@test.com
-        // payment : {
-        //     cardholderName: 'VISA',                  // VISA
-        //     pan: '6250947000000014',                 // 6250947000000014
-        //     expiry: '12/33',                         // 12/33
-        //     cvv: '123'                               // 123
-        // }
       },
       {
         headers: {
@@ -97,51 +91,39 @@ app.post('/api/access-token', async (req, res) => {
 
 
 async function getAuthToken() {
-  // let form = new FormData()
+
   try {
-    // const API_KEY = 'MzJmZDRhMzItNjJkZC00ZTcyLTkwOTItZDc2MDlkZjRiZWFjOjY5MDA5M2U3LTMxMjUtNDBiNS1iMzRkLTk3ZjVjZTI1YTQxZQ==';
-    const {
-      data: { access_token: accessToken } 
-    } = await axios.post(
+    const API_KEY = 'MzJmZDRhMzItNjJkZC00ZTcyLTkwOTItZDc2MDlkZjRiZWFjOjY5MDA5M2U3LTMxMjUtNDBiNS1iMzRkLTk3ZjVjZTI1YTQxZQ=='
+    const { data } = await axios.post(
       'https://api-gateway.sandbox.ngenius-payments.com/identity/auth/access-token',
       { grant_type: 'client_credentials' },
       {
         headers: {
-          // Accept: "application/x-www-form-urlencoded",
           "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: `Basic ${process.env.API_KEY}`
+          Authorization: `Basic ${API_KEY}`
         }
       }
     );
     // console.log(accessToken);
-    return accessToken;
+    return data.access_token;
   } catch (error) {
-    console.error('Error fetching auth token:', error);
-    throw new Error('Failed to retrieve access token');
+    console.error('Error fetching auth token:', error.message);
   }
 }
-  // MzJmZDRhMzItNjJkZC00ZTcyLTkwOTItZDc2MDlkZjRiZWFjOjY5MDA5M2U3LTMxMjUtNDBiNS1iMzRkLTk3ZjVjZTI1YTQxZQ==
-  // NzVkYWE0N2QtYTJhNS00NGYyLWI0YWQtMjRiY2NjMTFlYTIzOjVhMThiZTQyLWQzYTQtNDI0MC05OWU1LTMwZDBkMGI0ODU1NA==
-  // MzJmZDRhMzItNjJkZC00ZTcyLTkwOTItZDc2MDlkZjRiZWFjOjY5MDA5M2U3LTMxMjUtNDBiNS1iMzRkLTk3ZjVjZTI1YTQxZQ==
+
 app.post('/api/hosted-sessions/payment', async (req, res) => {
   // const { sessionId, order } = req.body;
-  const { sessionId } = req.body;
-  let { action, currencyCode, value, currency } = req.body;
-  console.log(action, currencyCode, value, currency);
+  const { sessionId, order, outletRef } = req.body;
+  console.log(order)
 
   try {
     const accessToken = await getAuthToken();
-    console.log(accessToken);
     console.log("Token!::::" + accessToken)
-  //   console.log(order)
-    const paymentResponse = await axios.post(
-      `https://api-gateway.sandbox.ngenius-payments.com/transactions/outlets/${process.env.OUTLET_REF}/payment/hosted-session/${sessionId}`,
-      {
 
-        action,
-        currencyCode, value,
-        currency
-          
+    const paymentResponse = await axios.post(
+      `https://api-gateway.sandbox.ngenius-payments.com/transactions/outlets/${outletRef}/payment/hosted-session/${sessionId}`,
+      {
+        ...order
       },
       {
         headers: {
@@ -154,7 +136,7 @@ app.post('/api/hosted-sessions/payment', async (req, res) => {
     res.status(200).send(paymentResponse.data);
   } catch (error) {
     console.error('Error processing payment:', error);
-    res.status(500).send({ message: 'Payment processing failed', error: error.message });
+    // res.status(500).send({ message: 'Payment processing failed', error: error.message });
   }
 });
 
